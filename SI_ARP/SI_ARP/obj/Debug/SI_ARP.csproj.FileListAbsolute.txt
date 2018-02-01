@@ -1,0 +1,9 @@
+C:\Users\vinic\source\repos\SI_ARP\SI_ARP\bin\Debug\SI_ARP.exe.config
+C:\Users\vinic\source\repos\SI_ARP\SI_ARP\bin\Debug\SI_ARP.exe
+C:\Users\vinic\source\repos\SI_ARP\SI_ARP\bin\Debug\SI_ARP.pdb
+C:\Users\vinic\source\repos\SI_ARP\SI_ARP\obj\Debug\SI_ARP.csprojResolveAssemblyReference.cache
+C:\Users\vinic\source\repos\SI_ARP\SI_ARP\obj\Debug\SI_ARP.ProjectInstaller.resources
+C:\Users\vinic\source\repos\SI_ARP\SI_ARP\obj\Debug\SI_ARP.csproj.GenerateResource.Cache
+C:\Users\vinic\source\repos\SI_ARP\SI_ARP\obj\Debug\SI_ARP.csproj.CoreCompileInputs.cache
+C:\Users\vinic\source\repos\SI_ARP\SI_ARP\obj\Debug\SI_ARP.exe
+C:\Users\vinic\source\repos\SI_ARP\SI_ARP\obj\Debug\SI_ARP.pdb
