@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -16,8 +16,9 @@ namespace SI_ARP
 {
     static class ip_operations
     {
-        public static List<IPAddress> recip(byte[] address, int indice, int max)
+        public static List<IPAddress> recip(byte[] addr, int indice, int max)
         {
+            byte[] address = addr;
             //Funcao recursiva de suport à IPs_rede
             List<IPAddress> ips_rede = new List<IPAddress>();
             if (indice == 3)
@@ -31,22 +32,30 @@ namespace SI_ARP
             }
             else
             {
-                if (address[indice] == 255 || address[indice] == max)
+                if (address[indice] == 255)
                 {
-                    //Console.WriteLine("Alterando Indice");
-                    max = 255;
-                    ips_rede.AddRange(recip(address, indice + 1, max));
+                    ips_rede.AddRange(recip(address, indice + 1, 255));
+                }
+                else if (address[indice] == max)
+                {
+                    ips_rede.AddRange(recip(address, indice + 1, 255));
                 }
                 else
                 {
-                    int numero = (int)address[indice] + 1;
-                    address[indice] = (byte)numero;
-                    //Console.WriteLine(new IPAddress(address));
-                    ips_rede.AddRange(recip(address, indice + 1, max));
+                    ips_rede.AddRange(recip(address, indice + 1, 255));
+                    //paus do .net. Sem esse 'for'o algoritmo nao funciona
+                    address[indice] = (byte)(1 + address[indice]);
+                    for (int i = indice + 1; i < 4; i++)
+                    {
+                        address[i] = 0;
+                    }
+                    //fim dos paus do .net
+                    ips_rede.AddRange(recip(address, indice, max));
                 }
             }
             return ips_rede;
         }
+
         public static List<IPAddress> IPs_Rede(this IPAddress address, IPAddress subnetmask)
         {
             // Metodo onde eu consigo todos os IP's de uma dada rede com sua subnet mask
@@ -79,6 +88,7 @@ namespace SI_ARP
                     sub[i] = subnetMaskBytes[i];
                 }
             }
+            //calculado de ate onde eu posso colocar IP
             dif = dif + (int)sub[vetor];
             //agora eu preciso pegar todos os IP's da rede
             ips_rede.AddRange(recip(sub, vetor, dif)); //funcao recursiva para me retornar todos os IPs
@@ -168,7 +178,7 @@ namespace SI_ARP
         public Service1(string[] args)
         {
             InitializeComponent();
-            string eventSourceName = "SI_BEACON";
+            string eventSourceName = "SI_Beacon";
             string logName = "Application";
             
             eventLog1 = new EventLog();
@@ -181,91 +191,121 @@ namespace SI_ARP
         }
         protected override void OnStart(string[] args)
         {
-            eventLog1.WriteEntry("Iniciando Serviço de coleta! Deseje-me sorte!", EventLogEntryType.Information, eventId);
+            //eventLog1.WriteEntry("Iniciando Serviço de coleta! Deseje-me sorte!", EventLogEntryType.Information, eventId);
             //TIMER
             System.Timers.Timer timer = new System.Timers.Timer();
-            timer.Interval = 600000; // 600 seconds ou 10 minutos  
+            timer.Interval = 60000;//200000; // 600 seconds ou 10 minutos  
             timer.Elapsed += new System.Timers.ElapsedEventHandler(this.OnTimer);
             timer.Start();
         }
 
         protected override void OnStop()
         {
-            eventLog1.WriteEntry("Mas que pena! Minha coleta termina agora...", EventLogEntryType.Information, eventId);
+            //eventLog1.WriteEntry("Mas que pena! Minha coleta termina agora...", EventLogEntryType.Information, eventId);
         }
 
         protected override void OnContinue()
         {
-            eventLog1.WriteEntry("Continuando Serviço de coleta! Deseje-me sorte!", EventLogEntryType.Information, eventId);
+            //eventLog1.WriteEntry("Continuando Serviço de coleta! Deseje-me sorte!", EventLogEntryType.Information, eventId);
             //TIMER
             System.Timers.Timer timer = new System.Timers.Timer();
-            timer.Interval = 600000; // 600 seconds ou 10 minutos  
+            timer.Interval = 60000; // 600 seconds ou 10 minutos  
             timer.Elapsed += new System.Timers.ElapsedEventHandler(this.OnTimer);
             timer.Start();
         }
 
         protected override void OnShutdown()
         {
-            eventLog1.WriteEntry("Mas que pena! Minha coleta termina agora...", EventLogEntryType.Information, eventId);
+            eventLog1.WriteEntry("Desligamento do serviço.", EventLogEntryType.Information, 10,1);
         }
 
         public void OnTimer(object sender, System.Timers.ElapsedEventArgs args)
         {
-            // TODO: Insert monitoring activities here.  
-            eventLog1.WriteEntry("Reiniciando a coleta...", EventLogEntryType.Information, eventId);
-
-
-            //Funcao principal deste programa é atualizar tabela ARP da rede e se possível pingar e obter a resposta de todos os IP's.
-            List<IPAddress> meus_ips = ip_operations.getmyips();
-            List<IPAddress> subnets = new List<IPAddress>();
-            //List<IPAddress> broadcast = new List<IPAddress>();
-            for (int i = 0; i < meus_ips.Count; i++)
+            EventLog eventLog = new EventLog();
+            string eventSourceName = "SI_Beacon";
+            string logName = "Application";
+            eventLog.Source = eventSourceName;
+            eventLog.Log = logName;
+            //eventLog.WriteEntry("Reiniciando a coleta...1", EventLogEntryType.Information, 10,1);
+            try
             {
-                subnets.Add(ip_operations.GetSubnetMask(meus_ips.ElementAt<IPAddress>(i)));
-                //broadcast.Add(GetBroadcastAddress(meus_ips.ElementAt<IPAddress>(i), subnets.ElementAt<IPAddress>(i))); //Console.WriteLine(subnets.ElementAt<IPAddress>(i)); Console.WriteLine(broadcast.ElementAt<IPAddress>(i));
-            }
-            List<IPAddress> IPs_na_rede = new List<IPAddress>();
-            for (int i = 0; i < meus_ips.Count; i++)
-            {
-                //IP's Atualizados
-                IPs_na_rede.AddRange(ip_operations.IPs_Rede(meus_ips.ElementAt<IPAddress>(i), subnets.ElementAt<IPAddress>(i)));
-            }
-            //Atualizando tabela ARP.
-            for (int i = 0; i < IPs_na_rede.Count; i++)
-            {
-                Socket sock = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.IP);
-                IPEndPoint endPoint = new IPEndPoint(IPs_na_rede.ElementAt<IPAddress>(i), 11000);
-                string text = "Hello! Has somewone some MAC Address I don't have?";
-                byte[] send_buffer = Encoding.ASCII.GetBytes(text);
-
-                sock.SendTo(send_buffer, endPoint);
-            }
-
-            var arpStream = ip_operations.ExecuteCommandLine("arp", "-a"); //Console.WriteLine(arpStream.ReadToEnd());
-
-            eventLog1.WriteEntry("MacAddressCheck:" + arpStream.ReadToEnd(), EventLogEntryType.Information, 10, 1);
-            //Enviando Ping
-            List<Task<PingReply>> pingTasks = new List<Task<PingReply>>();
-            for (int i = 0; i < IPs_na_rede.Count; i++)
-            {
-                pingTasks.Add(ip_operations.PingAsync(IPs_na_rede.ElementAt<IPAddress>(i).ToString()));
-            }
-            Task.WaitAll(pingTasks.ToArray());
-            //Recebendo resultados Ping.
-            String Resultado_pings = "Resultados de Resposta ICMP das máquinas conectadas.\n";
-            foreach (var pingTask in pingTasks)
-            {
-                //pingTask.Result is whatever type T was declared in PingAsync
-                if (pingTask.Result.Status.ToString() != "DestinationHostUnreachable")
+                //Funcao principal deste programa é atualizar tabela ARP da rede e se possível pingar e obter a resposta de todos os IP's.
+                List<IPAddress> meus_ips = ip_operations.getmyips();
+                List<IPAddress> subnets = new List<IPAddress>();
+                //List<IPAddress> broadcast = new List<IPAddress>();
+                for (int i = 0; i < meus_ips.Count; i++)
                 {
-                    if (pingTask.Result.Status.ToString() != "TimedOut")
-                    {
-                        if (pingTask.Result.Address.ToString() != "0.0.0.0")
-                            Resultado_pings = Resultado_pings + pingTask.Result.Address + " " + pingTask.Result.Status.ToString() + " " + pingTask.Result.RoundtripTime.ToString() + "ms.\n";
-                    }
+                    subnets.Add(ip_operations.GetSubnetMask(meus_ips.ElementAt<IPAddress>(i)));
+                    //broadcast.Add(GetBroadcastAddress(meus_ips.ElementAt<IPAddress>(i), subnets.ElementAt<IPAddress>(i))); //Console.WriteLine(subnets.ElementAt<IPAddress>(i)); Console.WriteLine(broadcast.ElementAt<IPAddress>(i));
                 }
+                List<IPAddress> IPs_na_rede = new List<IPAddress>();
+                for (int i = 0; i < meus_ips.Count; i++)
+                {
+                    //IP's Atualizados
+                    IPs_na_rede.AddRange(ip_operations.IPs_Rede(meus_ips.ElementAt<IPAddress>(i), subnets.ElementAt<IPAddress>(i)));
+                }
+                //Atualizando tabela ARP.
+                for (int i = 0; i < IPs_na_rede.Count; i++)
+                {
+                    try
+                    {
+                        Socket sock = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.IP);
+                        IPEndPoint endPoint = new IPEndPoint(IPs_na_rede.ElementAt<IPAddress>(i), 11000);
+                        string text = "Hello! Has somewone some MAC Address I don't have?";
+                        byte[] send_buffer = Encoding.ASCII.GetBytes(text);
+                        sock.SendTo(send_buffer, endPoint);
+                    }
+                    catch (Exception e)
+                    {
+                        //Erro porque é endereço inválido
+                        Debug.WriteLine(e.ToString());
+                    }
+
+                }
+
+                //Enviando Ping
+                String Resultado_pings = "Resultados de Resposta ICMP das máquinas conectadas.\n";
+
+                //Tentando paralelismo
+                Parallel.For(1, IPs_na_rede.Count, (i) =>
+                {
+                    try
+                    {
+                        Ping pingSender = new Ping();
+                        String IPping = IPs_na_rede.ElementAt<IPAddress>(i).ToString();
+                        Console.WriteLine("Pingando:" + IPping);
+                        PingReply reply = pingSender.Send(IPping);
+                        System.Threading.Thread.Sleep(3000);
+                        if (reply.Status == IPStatus.Success || reply.Status == IPStatus.TimedOut)
+                        {
+                            Resultado_pings = Resultado_pings + reply.Address.ToString() + " " + reply.Status.ToString() + " " + reply.RoundtripTime + "ms.\n";
+                            String Pingparcial = "Resultados de Resposta ICMP das máquinas conectadas.\n" + reply.Address.ToString() + " " + reply.Status.ToString() + " " + reply.RoundtripTime + "ms.\n";
+                            String parcial = reply.Address.ToString() + " " + reply.Status.ToString() + " " + reply.RoundtripTime + "ms.\n";
+                            Console.WriteLine(parcial);
+                        }
+                        else
+                        {
+                            Debug.WriteLine(reply.Status);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        //Erro porque é endereço inválido
+                        Debug.WriteLine(e.ToString());
+                    }
+
+                });
+
+                var arpStream = ip_operations.ExecuteCommandLine("arp", "-a"); //Console.WriteLine(arpStream.ReadToEnd());
+
+                eventLog.WriteEntry("MacAddressCheck: \n" + arpStream.ReadToEnd(), EventLogEntryType.Information, 10, 1);
+                eventLog.WriteEntry(Resultado_pings, EventLogEntryType.Information, 10, 1);
             }
-            eventLog1.WriteEntry(Resultado_pings, EventLogEntryType.Information, 10, 1);
+            catch(Exception e)
+            {
+                eventLog.WriteEntry(e.ToString(), EventLogEntryType.Information, 10, 1);
+            }
+            eventLog.Close();
         }
     }
 }
